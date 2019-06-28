@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: maven-cache
+  labels:
+    jenkins: maven-cache-node
+spec:
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 1000
+  containers:
+  - name: jnlp
+    image: jenkins/jnlp-slave:3.27-1-alpine:latest
+    imagePullPolicy: Always
+    args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+    workingDir: /home/jenkins
+    securityContext:
+      privileged: false
+      runAsUser: 1000
+      fsGroup: 1000
+    env:
+    - name: JENKINS_URL
+      value: https://your-jenkins.com
+    - name: HOME
+      value: /home/jenkins
+    volumeMounts:
+      - mountPath: "/home/jenkins/.m2"
+        name: maven-cache
+  volumes:
+  - name: maven-cache
+    persistentVolumeClaim:
+      claimName: maven-cache

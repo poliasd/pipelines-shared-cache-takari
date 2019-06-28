@@ -1,0 +1,39 @@
+#!/usr/bin/env groovy
+pipeline {
+    agent {
+        kubernetes {
+            label "maven-cache-node"
+            yamlFile  "kubePod.yaml"
+        }
+    }
+    environment {
+        MVN_VERSION = "maven 3.3.9"
+        SETTINGS_ID = "settings id"
+    }
+    stages {
+		stage('Install Takari') {
+		    steps {
+		        withMaven(maven: MVN_VERSION){
+		            sh """
+		               curl -O http://repo1.maven.org/maven2/io/takari/aether/takari-local-repository/0.10.4/takari-local-repository-0.10.4.jar
+                       curl -O http://repo1.maven.org/maven2/io/takari/takari-filemanager/0.8.2/takari-filemanager-0.8.2.jar
+                       mvn install:install-file -Dfile=takari-local-repository-0.10.4.jar -DgroupId=io.takari.aether  -DartifactId=takari-local-repository -Dversion=0.10.4 -Dpackaging=jar
+                       mvn install:install-file -Dfile=takari-filemanager-0.8.2.jar -DgroupId=io.takari  -DartifactId=takari-filemanager -Dversion=0.8.2 -Dpackaging=jar
+
+		            """
+		        }
+		    }
+		}
+		stage('Analyze dependencies') {
+			steps {
+				withMaven(maven: MVN_VERSION, mavenSettingsConfig: SETTINGS_ID){
+					sh """
+						mvn clean dependency:analyze-only -P ${PROFILES}
+					"""
+				}
+			}
+		}
+	}
+
+
+}
